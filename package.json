@@ -9,6 +9,8 @@
     "typescript": "^4.9.5"
   },
   "dependencies": {
+    "@slack/web-api": "^6.8.1",
+    "date-fns": "^2.29.3",
     "dotenv": "^16.0.3",
     "puppeteer": "^19.7.3",
     "puppeteer-extra": "^3.3.6",

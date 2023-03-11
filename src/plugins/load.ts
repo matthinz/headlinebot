@@ -20,10 +20,7 @@ export async function loadPlugin(articles: Article[]): Promise<Article[]> {
         reject(err);
       })
       .on("end", () => {
-        resolve([
-          ...articles,
-          ...(JSON.parse(buffer.toString("utf-8")) as Article[]),
-        ]);
+        resolve([...articles, ...parseArticles(buffer)]);
       });
   });
 }
@@ -47,7 +44,31 @@ function getArticlesFile(): string {
 
 function parseArticles(input: string | Buffer): Article[] {
   input = typeof input === "string" ? input : input.toString("utf-8");
-  return JSON.parse(input) as Article[];
+  const result = JSON.parse(input, reviver) as Article[];
+
+  if (!Array.isArray(result)) {
+    return [];
+  }
+
+  return result
+    .map((incoming) => {
+      if (!incoming) {
+        return;
+      }
+      incoming.metadata = incoming.metadata ?? {};
+      return incoming as Article;
+    })
+    .filter(Boolean);
+
+  function reviver(key: string, value: any) {
+    if (key === "date") {
+      if (value) {
+        value = new Date(value);
+      }
+    }
+
+    return value;
+  }
 }
 
 function serializeArticles(articles: Article[]): string {

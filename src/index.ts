@@ -4,13 +4,15 @@ import { loadPlugin, savePlugin } from "./plugins/load";
 import { scrapeHeadlinesPlugin } from "./plugins/headlines";
 import { printPlugin } from "./plugins/print";
 import { dedupePlugin } from "./plugins/dedupe";
+import { slackPlugin } from "./plugins/slack";
 
 const PLUGINS: Plugin[] = [
   loadPlugin,
   scrapeHeadlinesPlugin,
   dedupePlugin,
-  savePlugin,
+  // slackPlugin,
   printPlugin,
+  savePlugin,
 ];
 
 run().catch((err) => {

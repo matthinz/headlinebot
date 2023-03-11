@@ -10,7 +10,7 @@ import { summarizePlugin } from "./plugins/summarize";
 
 const PLUGINS: Plugin[] = [
   loadPlugin,
-  // scrapeHeadlinesPlugin,
+  scrapeHeadlinesPlugin,
   dedupePlugin,
   scrapeFullStoriesPlugin,
   summarizePlugin,

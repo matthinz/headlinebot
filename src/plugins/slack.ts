@@ -25,7 +25,7 @@ export async function slackPlugin(articles: Article[]): Promise<Article[]> {
             article.id,
             article.metadata.postedToSlackAt
           );
-          return;
+          //   return;
         }
 
         await client.chat.postMessage({
@@ -47,12 +47,7 @@ function articleToBlocks(article: Article) {
     type: "section",
     text: {
       type: "mrkdwn",
-      text: [
-        `*<${article.url}|${article.title}>*`,
-        article.date && `_${formatRelative(article.date, new Date())}_`,
-      ]
-        .filter(Boolean)
-        .join("\n"),
+      text: [`*<${article.url}|${article.title}>*`].filter(Boolean).join("\n"),
     },
   };
 
@@ -64,7 +59,26 @@ function articleToBlocks(article: Article) {
     };
   }
 
-  return [section];
+  return [
+    section,
+    article.summary && {
+      type: "section",
+      text: {
+        type: "plain_text",
+        text: article.summary,
+        emoji: false,
+      },
+    },
+    article.date && {
+      type: "context",
+      elements: [
+        {
+          type: "plain_text",
+          text: formatRelative(article.date, new Date()),
+        },
+      ],
+    },
+  ].filter(Boolean);
 }
 
 function formatMessage(article: Article): string {

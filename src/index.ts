@@ -5,12 +5,16 @@ import { scrapeHeadlinesPlugin } from "./plugins/headlines";
 import { printPlugin } from "./plugins/print";
 import { dedupePlugin } from "./plugins/dedupe";
 import { slackPlugin } from "./plugins/slack";
+import { scrapeFullStoriesPlugin } from "./plugins/full-stories";
+import { summarizePlugin } from "./plugins/summarize";
 
 const PLUGINS: Plugin[] = [
   loadPlugin,
-  scrapeHeadlinesPlugin,
+  // scrapeHeadlinesPlugin,
   dedupePlugin,
-  // slackPlugin,
+  scrapeFullStoriesPlugin,
+  summarizePlugin,
+  slackPlugin,
   printPlugin,
   savePlugin,
 ];

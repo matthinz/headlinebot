@@ -10,6 +10,7 @@ export type Article = {
   author?: string;
   date: Date;
   image?: Image;
+  summary?: string;
   content?: string;
   metadata: {
     [key: string]: string | number | boolean;

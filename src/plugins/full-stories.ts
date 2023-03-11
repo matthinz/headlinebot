@@ -24,7 +24,19 @@ export async function scrapeFullStoriesPlugin(
           };
         }
 
-        result.push({ ...article, content: sanitizeHtml(article.content) });
+        const newArticle = {
+          ...article,
+
+          content: sanitizeHtml(article.content),
+        };
+
+        if (article.author) {
+          newArticle.author = sanitizeHtml(article.author, {
+            allowedTags: [],
+          });
+        }
+
+        result.push(newArticle);
 
         return result;
       }),

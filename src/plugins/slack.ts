@@ -25,13 +25,14 @@ export async function slackPlugin(articles: Article[]): Promise<Article[]> {
             article.id,
             article.metadata.postedToSlackAt
           );
-          //   return;
+          return;
         }
 
         await client.chat.postMessage({
           channel: process.env.SLACK_CHANNEL,
           text: article.title,
           blocks: articleToBlocks(article),
+          unfurl_links: false,
         });
 
         article.metadata.postedToSlackAt = new Date().toISOString();
@@ -43,24 +44,19 @@ export async function slackPlugin(articles: Article[]): Promise<Article[]> {
 }
 
 function articleToBlocks(article: Article) {
-  const section: any = {
-    type: "section",
-    text: {
-      type: "mrkdwn",
-      text: [`*<${article.url}|${article.title}>*`].filter(Boolean).join("\n"),
-    },
-  };
-
-  if (article.image) {
-    section.accessory = {
+  return [
+    article.image && {
       type: "image",
       image_url: article.image.src,
       alt_text: article.image.alt,
-    };
-  }
-
-  return [
-    section,
+    },
+    {
+      type: "section",
+      text: {
+        type: "mrkdwn",
+        text: `*<${article.url}|${article.title}>*`,
+      },
+    },
     article.summary && {
       type: "section",
       text: {
@@ -69,14 +65,19 @@ function articleToBlocks(article: Article) {
         emoji: false,
       },
     },
-    article.date && {
+    (article.date || article.author) && {
       type: "context",
       elements: [
-        {
+        article.author && {
+          type: "plain_text",
+          text: article.author,
+        },
+
+        article.date && {
           type: "plain_text",
           text: formatRelative(article.date, new Date()),
         },
-      ],
+      ].filter(Boolean),
     },
   ].filter(Boolean);
 }

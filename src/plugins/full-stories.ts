@@ -64,7 +64,8 @@ async function scrapeArticle(
     const content = article.innerHTML;
 
     const author = (
-      document.querySelector("article.story-body .byline a").innerHTML ?? ""
+      document.querySelector<HTMLElement>("article.story-body .byline")
+        ?.innerText ?? ""
     ).replace(/^By\s*/i, "");
 
     return { author, content };

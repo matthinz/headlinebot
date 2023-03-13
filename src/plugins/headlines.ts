@@ -67,9 +67,10 @@ async function scrapeArticles(page: Page): Promise<Article[]> {
             url,
             date,
             image,
+            metadata: {},
           };
         }
       )
     )
-    .then((stories) => stories.filter(Boolean) as Article[]);
+    .then((stories) => stories.filter(Boolean) as Article[]); // TODO: Ditch as Article[]
 }

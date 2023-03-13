@@ -19,6 +19,10 @@ export async function slackPlugin(articles: Article[]): Promise<Article[]> {
   await oldestToNewest.reduce(
     (promise, article) =>
       promise.then(async () => {
+        if (!article.metadata) {
+          throw new Error(`Article missing metadata: ${article.id}`);
+        }
+
         if (article.metadata.postedToSlackAt) {
           console.error(
             "Not posting %s -- posted to slack at %s",
@@ -75,7 +79,10 @@ function articleToBlocks(article: Article) {
 
         article.date && {
           type: "plain_text",
-          text: formatRelative(article.date, new Date()),
+          text:
+            article.date instanceof Date
+              ? formatRelative(article.date, new Date())
+              : article.date,
         },
       ].filter(Boolean),
     },

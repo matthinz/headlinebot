@@ -1,28 +1,47 @@
 import { Configuration, OpenAIApi } from "openai";
-import { Article } from "../types";
+import { Article, Logger, Plugin, State } from "../types";
 
-export function summarizePlugin(articles: Article[]): Promise<Article[]> {
-  return articles.reduce<Promise<Article[]>>(
-    (promise, article) =>
-      promise.then(async (result) => {
-        if (article.summary) {
-          result.push(article);
+type SummarizePluginOptions = {
+  logger: Logger;
+};
+
+export function summarizePlugin({ logger }: SummarizePluginOptions): Plugin {
+  return async (state: State): Promise<State> => ({
+    ...state,
+    articles: await state.articles.reduce<Promise<Article[]>>(
+      (promise: Promise<Article[]>, article: Article) =>
+        promise.then(async (result) => {
+          if (article.summary) {
+            result.push(article);
+            return result;
+          }
+
+          const summary = await summarize(article, logger);
+          if (summary) {
+            result.push({
+              ...article,
+              summary,
+            });
+          } else {
+            result.push(article);
+          }
+
           return result;
-        }
-
-        const summary = await summarize(article);
-        result.push({
-          ...article,
-          summary,
-        });
-
-        return result;
-      }),
-    Promise.resolve([])
-  );
+        }),
+      Promise.resolve([])
+    ),
+  });
 }
 
-async function summarize(article: Article): Promise<string> {
+async function summarize(
+  article: Article,
+  logger: Logger
+): Promise<string | undefined> {
+  const { content } = article;
+  if (!content) {
+    return;
+  }
+
   const configuration = new Configuration({
     apiKey: process.env.OPENAI_API_KEY,
   });
@@ -47,14 +66,14 @@ Headline: ${article.title}
 
 Article Text:
 
-${article.content.replace(/ +/g, " ")}
+${content.replace(/ +/g, " ")}
 
                 `.trim(),
       },
     ],
   });
 
-  console.error(JSON.stringify(response.data));
+  logger.debug(JSON.stringify(response.data, null, 2));
 
   return response.data.choices[0].message?.content;
 }

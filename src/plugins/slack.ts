@@ -1,65 +1,83 @@
-import { Article } from "../types";
+import { Article, Plugin, State } from "../types";
 import { formatRelative } from "date-fns";
-import { WebClient } from "@slack/web-api";
+import { KnownBlock, WebClient } from "@slack/web-api";
+import { oldestToNewestByDate } from "../utils";
 
-export async function slackPlugin(articles: Article[]): Promise<Article[]> {
-  const client = new WebClient(process.env.SLACK_TOKEN);
+type SlackPluginOptions = {
+  channel: string;
+  token: string;
+};
 
-  const oldestToNewest = [...articles];
-  oldestToNewest.sort((a, b) => {
-    if (a.date < b.date) {
-      return -1;
-    } else if (a.date > b.date) {
-      return 1;
-    } else {
-      return 0;
-    }
-  });
+export function slackPlugin({ channel, token }: SlackPluginOptions): Plugin {
+  const client = new WebClient(token);
 
-  await oldestToNewest.reduce(
-    (promise, article) =>
-      promise.then(async () => {
-        if (!article.metadata) {
-          throw new Error(`Article missing metadata: ${article.id}`);
-        }
+  return async (state: State): Promise<State> => {
+    const oldestToNewest = await [...state.articles]
+      .sort(oldestToNewestByDate)
+      .reduce<Promise<Article[]>>(
+        (promise, article) =>
+          promise.then(async (result) => {
+            if (article.metadata?.postedToSlackAt) {
+              console.error(
+                "Not posting %s -- posted to slack at %s",
+                article.id,
+                article.metadata.postedToSlackAt
+              );
+              result.push(article);
+              return result;
+            }
 
-        if (article.metadata.postedToSlackAt) {
-          console.error(
-            "Not posting %s -- posted to slack at %s",
-            article.id,
-            article.metadata.postedToSlackAt
-          );
-          return;
-        }
+            await client.chat.postMessage({
+              channel,
+              text: article.title,
+              // @ts-ignore
+              blocks: articleToBlocks(article),
+              unfurl_links: false,
+            });
 
-        await client.chat.postMessage({
-          channel: process.env.SLACK_CHANNEL,
-          text: article.title,
-          blocks: articleToBlocks(article),
-          unfurl_links: false,
-        });
+            result.push({
+              ...article,
+              metadata: {
+                ...(article?.metadata ?? {}),
+                postedToSlackAt: new Date().toISOString(),
+              },
+            });
 
-        article.metadata.postedToSlackAt = new Date().toISOString();
-      }),
-    Promise.resolve()
-  );
+            return result;
+          }),
+        Promise.resolve([])
+      );
 
-  return articles;
+    return {
+      ...state,
+      articles: state.articles
+        .map(({ id }) => oldestToNewest.find((a) => a.id === id))
+        .filter(Boolean) as Article[],
+    };
+  };
 }
 
-function articleToBlocks(article: Article) {
+function articleToBlocks(article: Article): KnownBlock[] {
   return [
-    article.image && {
-      type: "image",
-      image_url: article.image.src,
-      alt_text: article.image.alt,
-    },
     {
       type: "section",
       text: {
         type: "mrkdwn",
-        text: `*<${article.url}|${article.title}>*`,
+        text: `*${article.title}*`,
       },
+    },
+    (article.date || article.author) && {
+      type: "context",
+      elements: [
+        article.date && {
+          type: "plain_text",
+          text: formatRelative(article.date, new Date()),
+        },
+        article.author && {
+          type: "plain_text",
+          text: article.author,
+        },
+      ].filter(Boolean) as KnownBlock[],
     },
     article.summary && {
       type: "section",
@@ -69,26 +87,5 @@ function articleToBlocks(article: Article) {
         emoji: false,
       },
     },
-    (article.date || article.author) && {
-      type: "context",
-      elements: [
-        article.author && {
-          type: "plain_text",
-          text: article.author,
-        },
-
-        article.date && {
-          type: "plain_text",
-          text:
-            article.date instanceof Date
-              ? formatRelative(article.date, new Date())
-              : article.date,
-        },
-      ].filter(Boolean),
-    },
-  ].filter(Boolean);
-}
-
-function formatMessage(article: Article): string {
-  return [].join("\n");
+  ].filter(Boolean) as KnownBlock[];
 }

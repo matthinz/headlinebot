@@ -1,15 +1,34 @@
 import fs from "node:fs";
 import zlib from "node:zlib";
-import { Article } from "../types";
+import { StateSchema } from "../schema";
+import { State } from "../types";
 
-export async function loadPlugin(articles: Article[]): Promise<Article[]> {
+export async function loadPlugin(state: State): Promise<State> {
+  const json = await loadJsonFromGzippedFile(
+    process.env.STATE_FILE ?? ".state.json.gz"
+  );
+
+  const parsed = StateSchema.safeParse(json);
+
+  if (!parsed.success) {
+    console.error("Warning: State file was invalid.");
+    console.error(parsed.error.format());
+    return state;
+  }
+
+  return {
+    articles: [...state.articles, ...parsed.data.articles],
+    cache: [...state.cache, ...parsed.data.cache],
+  };
+}
+
+function loadJsonFromGzippedFile(file: string): Promise<any> {
   return new Promise((resolve, reject) => {
     let buffer = Buffer.from("");
-
-    fs.createReadStream(getArticlesFile())
+    fs.createReadStream(file)
       .on("error", (err: any) => {
         if (err.code === "ENOENT") {
-          resolve(articles);
+          resolve(undefined);
         } else {
           reject(err);
         }
@@ -20,57 +39,19 @@ export async function loadPlugin(articles: Article[]): Promise<Article[]> {
         reject(err);
       })
       .on("end", () => {
-        resolve([...articles, ...parseArticles(buffer)]);
+        try {
+          resolve(JSON.parse(buffer.toString("utf-8")));
+        } catch {
+          resolve(undefined);
+        }
       });
   });
 }
 
-export async function savePlugin(articles: Article[]): Promise<Article[]> {
-  return new Promise((resolve, reject) => {
-    zlib
-      .createGzip()
-      .end(serializeArticles(articles))
-      .pipe(fs.createWriteStream(getArticlesFile()))
-      .on("error", reject)
-      .on("finish", () => {
-        resolve(articles);
-      });
-  });
-}
+export function deserializeState(input: string | Buffer): State {
+  const json = JSON.parse(
+    typeof input === "string" ? input : input.toString("utf-8")
+  );
 
-function getArticlesFile(): string {
-  return process.env.ARTICLES_FILE ?? ".articles.json.gz";
-}
-
-function parseArticles(input: string | Buffer): Article[] {
-  input = typeof input === "string" ? input : input.toString("utf-8");
-  const result = JSON.parse(input, reviver) as Article[];
-
-  if (!Array.isArray(result)) {
-    return [];
-  }
-
-  return result
-    .map((incoming) => {
-      if (!incoming) {
-        return;
-      }
-      incoming.metadata = incoming.metadata ?? {};
-      return incoming as Article;
-    })
-    .filter(Boolean);
-
-  function reviver(key: string, value: any) {
-    if (key === "date") {
-      if (value) {
-        value = new Date(value);
-      }
-    }
-
-    return value;
-  }
-}
-
-function serializeArticles(articles: Article[]): string {
-  return JSON.stringify(articles, null, 2);
+  return StateSchema.parse(json);
 }

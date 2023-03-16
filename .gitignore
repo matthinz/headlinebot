@@ -1,5 +1,5 @@
-.articles.json.gz
-.cookies.json
+/*.json
+/*.json.gz
 
 .DS_Store
 

@@ -61,7 +61,8 @@ async function run(args: string[]) {
       slackPlugin({
         channel: process.env.SLACK_CHANNEL,
         token: process.env.SLACK_TOKEN,
-      })
+      }),
+      savePlugin
     );
   }
 

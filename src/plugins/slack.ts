@@ -1,6 +1,6 @@
 import { Article, Plugin, State } from "../types";
 import { formatRelative } from "date-fns";
-import { KnownBlock, WebClient } from "@slack/web-api";
+import { ContextBlock, KnownBlock, WebClient } from "@slack/web-api";
 import { oldestToNewestByDate } from "../utils";
 
 type SlackPluginOptions = {
@@ -12,53 +12,59 @@ export function slackPlugin({ channel, token }: SlackPluginOptions): Plugin {
   const client = new WebClient(token);
 
   return async (state: State): Promise<State> => {
-    const oldestToNewest = await [...state.articles]
-      .sort(oldestToNewestByDate)
-      .reduce<Promise<Article[]>>(
-        (promise, article) =>
-          promise.then(async (result) => {
-            if (article.metadata?.postedToSlackAt) {
-              console.error(
-                "Not posting %s -- posted to slack at %s",
-                article.id,
-                article.metadata.postedToSlackAt
-              );
-              result.push(article);
-              return result;
-            }
+    const oldestToNewest = [...state.articles].sort(oldestToNewestByDate);
 
-            await client.chat.postMessage({
-              channel,
-              text: article.title,
-              // @ts-ignore
-              blocks: articleToBlocks(article),
-              unfurl_links: false,
-            });
+    const postedArticles = await oldestToNewest.reduce<Promise<Article[]>>(
+      (promise, article) =>
+        promise.then(async (postedArticles) => {
+          if (article.metadata?.postedToSlackAt) {
+            console.error(
+              "Not posting %s -- posted to slack at %s",
+              article.id,
+              article.metadata.postedToSlackAt
+            );
+            postedArticles.push(article);
+            return postedArticles;
+          }
 
-            result.push({
-              ...article,
-              metadata: {
-                ...(article?.metadata ?? {}),
-                postedToSlackAt: new Date().toISOString(),
-              },
-            });
+          const blocks = articleToBlocks(article);
 
-            return result;
-          }),
-        Promise.resolve([])
-      );
+          await client.chat.postMessage({
+            channel,
+            text: article.title,
+            // @ts-ignore
+            blocks: blocks,
+            unfurl_links: false,
+          });
+
+          postedArticles.push({
+            ...article,
+            metadata: {
+              ...(article?.metadata ?? {}),
+              postedToSlackAt: new Date().toISOString(),
+            },
+          });
+
+          return postedArticles;
+        }),
+      Promise.resolve([])
+    );
 
     return {
       ...state,
-      articles: state.articles
-        .map(({ id }) => oldestToNewest.find((a) => a.id === id))
-        .filter(Boolean) as Article[],
+      articles: state.articles.map(({ id }) => {
+        const article = postedArticles.find((a) => a.id === id);
+        if (!article) {
+          throw new Error(`Article with id ${id} not found.`);
+        }
+        return article;
+      }),
     };
   };
 }
 
 function articleToBlocks(article: Article): KnownBlock[] {
-  return [
+  const blocks: KnownBlock[] = [
     {
       type: "section",
       text: {
@@ -66,26 +72,46 @@ function articleToBlocks(article: Article): KnownBlock[] {
         text: `*${article.title}*`,
       },
     },
-    (article.date || article.author) && {
-      type: "context",
-      elements: [
-        article.date && {
-          type: "plain_text",
-          text: formatRelative(article.date, new Date()),
-        },
-        article.author && {
-          type: "plain_text",
-          text: article.author,
-        },
-      ].filter(Boolean) as KnownBlock[],
+  ];
+
+  if (!article.summary) {
+    return blocks;
+  }
+
+  blocks.push({
+    type: "section",
+    text: {
+      type: "plain_text",
+      text: article.summary,
+      emoji: false,
     },
-    article.summary && {
-      type: "section",
-      text: {
-        type: "plain_text",
-        text: article.summary,
-        emoji: false,
-      },
-    },
-  ].filter(Boolean) as KnownBlock[];
+  });
+
+  const context: ContextBlock = {
+    type: "context",
+    elements: [],
+  };
+
+  if (article.date) {
+    context.elements.push({
+      type: "plain_text",
+      text: formatRelative(article.date, new Date()),
+    });
+  }
+
+  if (article.author) {
+    context.elements.push({
+      type: "plain_text",
+      text: article.author,
+    });
+  }
+
+  context.elements.push({
+    type: "mrkdwn",
+    text: `<${article.url}|View original>`,
+  });
+
+  blocks.push(context);
+
+  return blocks;
 }

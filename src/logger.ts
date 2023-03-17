@@ -15,9 +15,10 @@ export function createConsoleLogger({
   const logger = {
     debug,
     info,
+    warn,
   };
 
-  return logger;
+  return Object.freeze(logger);
 
   function debug(...args: any[]): Logger {
     if (verbose) {
@@ -26,9 +27,16 @@ export function createConsoleLogger({
     }
     return logger;
   }
+
   function info(...args: any[]): Logger {
     out.write(format(...args));
     out.write("\n");
+    return logger;
+  }
+
+  function warn(...args: any[]): Logger {
+    err.write(format(...args));
+    err.write("\n");
     return logger;
   }
 }

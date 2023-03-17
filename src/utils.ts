@@ -1,4 +1,35 @@
+import { Article } from "./types";
+
 export type Milliseconds = number;
+
+export function augmentArticle(
+  article: Article,
+  props: Omit<Partial<Article>, "metadata">,
+  metadata?: Article["metadata"]
+): Article {
+  return {
+    ...article,
+    ...props,
+    metadata: {
+      ...(article.metadata ?? {}),
+      ...(metadata ?? {}),
+    },
+  };
+}
+
+export function asyncMap<In, Out>(
+  items: In[],
+  mapper: (input: In) => Promise<Out>
+): Promise<Out[]> {
+  return items.reduce<Promise<Out[]>>(
+    (promise, item) =>
+      promise.then(async (result) => {
+        result.push(await mapper(item));
+        return result;
+      }),
+    Promise.resolve([])
+  );
+}
 
 export function oldestToNewestByDate<T extends { date?: Date }>(
   a: T,

@@ -13,9 +13,11 @@
   },
   "dependencies": {
     "@slack/web-api": "^6.8.1",
+    "aws-sdk": "^2.1336.0",
     "cheerio": "^1.0.0-rc.12",
     "date-fns": "^2.29.3",
     "dotenv": "^16.0.3",
+    "feed": "^4.2.2",
     "openai": "^3.2.1",
     "prettier": "^2.8.4",
     "puppeteer": "^19.7.3",

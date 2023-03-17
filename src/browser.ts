@@ -1,5 +1,4 @@
-import fs from "node:fs/promises";
-import { Page } from "puppeteer";
+import { Browser as PuppeteerBrowser, Page } from "puppeteer";
 import puppeteer from "puppeteer-extra";
 import stealthPlugin from "puppeteer-extra-plugin-stealth";
 import { Logger } from "./types";
@@ -22,71 +21,71 @@ export async function launchBrowser({
   logger,
   onPageLoad,
 }: BrowserOptions): Promise<Browser> {
-  const browser = await puppeteer.launch({
-    headless: false,
-    defaultViewport: null,
-    executablePath: process.env.CHROME_PATH,
-  });
-
-  const page = (await browser.pages())[0] ?? (await browser.newPage());
+  let browserPromise: Promise<PuppeteerBrowser> | undefined;
 
   const blockedHosts = new Set<string>();
 
-  page.emulateTimezone("America/Los_Angeles");
-
-  page.setRequestInterception(true);
-
-  page.on("request", (request) => {
-    const requestUrl = new URL(request.url());
-    if (shouldBlockRequest(requestUrl)) {
-      if (!blockedHosts.has(requestUrl.hostname)) {
-        logger.debug("Blocking request to %s", requestUrl.hostname);
-        blockedHosts.add(requestUrl.hostname);
-      }
-
-      request.abort();
-    } else {
-      request.continue();
-    }
-  });
-
-  await restoreCookies(page);
-
   return { close, get };
 
+  function getPage(): Promise<Page> {
+    browserPromise =
+      browserPromise ??
+      puppeteer.launch({
+        headless: false,
+        defaultViewport: null,
+        executablePath: process.env.CHROME_PATH,
+      });
+
+    return browserPromise.then(async (browser) => {
+      const page = await browser.newPage();
+
+      page.emulateTimezone("America/Los_Angeles");
+      page.setRequestInterception(true);
+
+      page.on("request", (request) => {
+        const requestUrl = new URL(request.url());
+        if (shouldBlockRequest(requestUrl)) {
+          if (!blockedHosts.has(requestUrl.hostname)) {
+            logger.debug("Blocking request to %s", requestUrl.hostname);
+            blockedHosts.add(requestUrl.hostname);
+          }
+
+          request.abort();
+        } else {
+          request.continue();
+        }
+      });
+
+      return page;
+    });
+  }
+
   async function close() {
-    await saveCookies(page);
+    if (!browserPromise) {
+      return;
+    }
+    const browser = await browserPromise;
+    browserPromise = undefined;
     await browser.close();
   }
 
   async function get(url: string | URL): Promise<string> {
+    const page = await getPage();
+
     await page.goto(url.toString());
 
     await onPageLoad(page);
 
-    return await page.evaluate(() => document.documentElement.outerHTML);
+    const result = await page.evaluate(
+      () => document.documentElement.outerHTML
+    );
+
+    await page.close();
+
+    return result;
   }
 
   function shouldBlockRequest(requestUrl: URL): boolean {
     return !allowedHosts.includes(requestUrl.hostname);
   }
-}
-
-async function restoreCookies(page: Page, cookiesFile = ".cookies.json") {
-  let cookies;
-
-  try {
-    cookies = JSON.parse(await fs.readFile(cookiesFile, "utf-8"));
-  } catch (err: any) {
-    if (err.code !== "ENOENT") {
-      throw err;
-    }
-  }
-
-  await page.setCookie(...cookies);
-}
-
-async function saveCookies(page: Page, cookiesFile = ".cookies.json") {
-  const cookies = await page.cookies();
-  await fs.writeFile(cookiesFile, JSON.stringify(cookies, null, 2));
 }

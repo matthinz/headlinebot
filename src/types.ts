@@ -1,11 +1,16 @@
-import cheerio from "cheerio";
 import { z } from "zod";
 import {
   ArticleSchema,
+  ArtifactSchema,
   ImageSchema,
   RequestedDocumentSchema,
   StateSchema,
+  TextContentSchema,
 } from "./schema";
+
+export type Artifact = z.infer<typeof ArtifactSchema>;
+
+export type TextContent = z.infer<typeof TextContentSchema>;
 
 export type Image = z.infer<typeof ImageSchema>;
 
@@ -29,4 +34,5 @@ export type Scraper = {
 export type Logger = {
   debug: (...args: any[]) => Logger;
   info: (...args: any[]) => Logger;
+  warn: (...args: any[]) => Logger;
 };

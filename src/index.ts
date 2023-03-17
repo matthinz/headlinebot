@@ -11,6 +11,8 @@ import { delay } from "./utils";
 import { normalizePlugin } from "./plugins/normalize";
 import { summarizePlugin } from "./plugins/summarize";
 import { slackPlugin } from "./plugins/slack";
+import { rssPlugin } from "./plugins/rss";
+import { s3Plugin } from "./plugins/s3";
 
 run(process.argv.slice(2)).catch((err) => {
   console.error(err);
@@ -52,17 +54,30 @@ async function run(args: string[]) {
       browser,
       logger,
     }),
-    summarizePlugin({ logger }),
+    summarizePlugin({ logger, maxArticleAgeInDays: 5 }),
     savePlugin,
+    rssPlugin(),
   ].filter(Boolean) as Plugin[];
 
   if (process.env.SLACK_CHANNEL && process.env.SLACK_TOKEN) {
     plugins.push(
       slackPlugin({
         channel: process.env.SLACK_CHANNEL,
+        logger,
         token: process.env.SLACK_TOKEN,
       }),
       savePlugin
+    );
+  }
+
+  if (process.env.S3_BUCKET) {
+    plugins.push(
+      s3Plugin({
+        bucket: process.env.S3_BUCKET,
+        endpoint: process.env.S3_ENDPOINT,
+        logger,
+        region: process.env.S3_REGION,
+      })
     );
   }
 

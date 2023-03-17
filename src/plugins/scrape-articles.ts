@@ -10,6 +10,7 @@ import {
   RequestedDocument,
   Scraper,
   State,
+  TextContent,
 } from "../types";
 
 export type ScrapeArticlesPluginOptions = {
@@ -17,21 +18,13 @@ export type ScrapeArticlesPluginOptions = {
   logger: Logger;
 };
 
+const REMOVE_SELECTORS = ["header", "footer", "figure"];
+
 const SCRAPERS: Scraper[] = [
   {
     key: "content",
     selector: "article.story-body",
-    reader($el) {
-      let html = ($el.html() ?? "").trim();
-      if (html === "") {
-        return;
-      }
-      html = sanitizeHtml(html);
-
-      return prettier.format(html, {
-        parser: "html",
-      });
-    },
+    reader: scrapeTextContent,
   },
   {
     key: "author",
@@ -129,4 +122,42 @@ function scrapeArticle(article: Article, html: string): Article | undefined {
     console.error(raw);
     console.error(parsed.error);
   }
+}
+
+function scrapeTextContent($el: cheerio.Cheerio): TextContent | undefined {
+  REMOVE_SELECTORS.forEach((selector) => {
+    $el.find(selector).remove();
+  });
+
+  const rawHtml = ($el.html() ?? "").trim();
+
+  if (rawHtml === "") {
+    return;
+  }
+
+  const html = cleanHtml(rawHtml);
+
+  const text = htmlToPlainText(html);
+
+  return { html, text };
+}
+
+export function cleanHtml(html: string): string {
+  return [
+    (html: string) => sanitizeHtml(html),
+    (html: string) => prettier.format(html, { parser: "html" }),
+  ].reduce((html, formatter) => formatter(html), html);
+}
+
+export function htmlToPlainText(html: string): string {
+  return [
+    (html: string) => sanitizeHtml(html, { allowedTags: [] }),
+    (text: string) =>
+      text
+        .split("\n")
+        .map((line) => line.trim())
+        .join("\n"),
+    (text: string) => text.replace(/\n{2,}/g, "\n\n"),
+    (text: string) => text.trim(),
+  ].reduce((text, formatter) => formatter(text), html);
 }

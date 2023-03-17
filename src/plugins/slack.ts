@@ -1,14 +1,19 @@
-import { Article, Plugin, State } from "../types";
+import { Article, Logger, Plugin, State } from "../types";
 import { formatRelative } from "date-fns";
 import { ContextBlock, KnownBlock, WebClient } from "@slack/web-api";
-import { oldestToNewestByDate } from "../utils";
+import { augmentArticle, oldestToNewestByDate } from "../utils";
 
 type SlackPluginOptions = {
   channel: string;
+  logger: Logger;
   token: string;
 };
 
-export function slackPlugin({ channel, token }: SlackPluginOptions): Plugin {
+export function slackPlugin({
+  channel,
+  logger,
+  token,
+}: SlackPluginOptions): Plugin {
   const client = new WebClient(token);
 
   return async (state: State): Promise<State> => {
@@ -18,7 +23,7 @@ export function slackPlugin({ channel, token }: SlackPluginOptions): Plugin {
       (promise, article) =>
         promise.then(async (postedArticles) => {
           if (article.metadata?.postedToSlackAt) {
-            console.error(
+            logger.debug(
               "Not posting %s -- posted to slack at %s",
               article.id,
               article.metadata.postedToSlackAt
@@ -37,13 +42,15 @@ export function slackPlugin({ channel, token }: SlackPluginOptions): Plugin {
             unfurl_links: false,
           });
 
-          postedArticles.push({
-            ...article,
-            metadata: {
-              ...(article?.metadata ?? {}),
-              postedToSlackAt: new Date().toISOString(),
-            },
-          });
+          postedArticles.push(
+            augmentArticle(
+              article,
+              {},
+              {
+                postedToSlackAt: new Date().toISOString(),
+              }
+            )
+          );
 
           return postedArticles;
         }),

@@ -60,30 +60,32 @@ export function scrapeArticlesPlugin({
     const promise = state.articles.reduce<Promise<Article[]>>(
       (promise, article) =>
         promise.then(async (articles) => {
-          let html: string;
-
-          let cacheEntry = state.cache.find(
-            (d) => d.url === article.url.toString()
+          const { document, foundInCache } = await cachedGet(
+            article.url,
+            browser.get,
+            state.cache
           );
-          if (cacheEntry) {
-            logger.debug("Loading %s from cache", article.url.toString());
-            html = cacheEntry.body;
-          } else {
-            html = await browser.get(article.url);
-            nextCache = nextCache ?? [...state.cache];
-            nextCache.push({
-              date: new Date(),
-              url: article.url.toString(),
-              body: html,
-            });
+
+          if (foundInCache) {
+            logger.debug("Loaded %s from cache", article.url.toString());
           }
 
-          const full = scrapeArticle(article, html);
-
-          if (full) {
-            articles.push(full);
+          if (document) {
+            const full = scrapeArticle(article, document.body);
+            if (full) {
+              articles.push(full);
+              nextCache =
+                nextCache ??
+                [...state.cache].filter(
+                  (e) => e.url !== article.url.toString()
+                );
+              nextCache.push(document);
+            } else {
+              // We weren't able to scrape anything -- don't save the cache
+              articles.push(article);
+            }
           } else {
-            articles.push(article);
+            logger.warn("Could not get content for %s", article.url);
           }
 
           return articles;
@@ -160,4 +162,26 @@ export function htmlToPlainText(html: string): string {
     (text: string) => text.replace(/\n{2,}/g, "\n\n"),
     (text: string) => text.trim(),
   ].reduce((text, formatter) => formatter(text), html);
+}
+
+async function cachedGet(
+  url: string | URL,
+  get: Browser["get"],
+  cache: RequestedDocument[]
+): Promise<{ document?: RequestedDocument; foundInCache: boolean }> {
+  url = url.toString();
+  const document = cache.find((e) => e.url === url);
+  if (document) {
+    return { document, foundInCache: true };
+  }
+
+  const body = await get(url);
+  return {
+    document: {
+      body,
+      date: new Date(),
+      url,
+    },
+    foundInCache: false,
+  };
 }

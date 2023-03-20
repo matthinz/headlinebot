@@ -1,5 +1,5 @@
 import { Feed } from "feed";
-import { Plugin, State } from "../types";
+import { Article, Plugin, State } from "../types";
 
 export function rssPlugin(): Plugin {
   return async (state: State): Promise<State> => {
@@ -16,7 +16,7 @@ export function rssPlugin(): Plugin {
         title: article.title,
         description: article.summary,
         id: article.id,
-        content: article.content?.html ?? article.summary,
+        content: buildContent(article),
       });
     });
 
@@ -33,4 +33,19 @@ export function rssPlugin(): Plugin {
       ],
     };
   };
+}
+
+function buildContent(article: Article): string | undefined {
+  if (article.content && article.summary) {
+    return [
+      "<blockquote>",
+      article.summary,
+      "</blockquote>",
+      article.content.html,
+    ].join("\n");
+  } else if (article.content) {
+    return article.content.html;
+  } else if (article.summary) {
+    return article.summary;
+  }
 }

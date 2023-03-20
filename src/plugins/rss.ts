@@ -16,10 +16,7 @@ export function rssPlugin(): Plugin {
         title: article.title,
         description: article.summary,
         id: article.id,
-        content:
-          typeof article.content === "string"
-            ? article.content
-            : article.content?.html,
+        content: article.content?.html ?? article.summary,
       });
     });
 

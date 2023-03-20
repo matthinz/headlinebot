@@ -18,7 +18,7 @@ export const ArticleSchema = z.object({
   date: z.coerce.date().optional(),
   image: ImageSchema.optional(),
   summary: z.string().optional(),
-  content: z.string().or(TextContentSchema).optional(),
+  content: TextContentSchema.optional(),
   metadata: z
     .object({})
     .catchall(z.string().or(z.number()).or(z.boolean()))

@@ -24,10 +24,16 @@ export function slackPlugin({
         promise.then(async (postedArticles) => {
           if (article.metadata?.postedToSlackAt) {
             logger.debug(
-              "Not posting %s -- posted to slack at %s",
+              "Slack: Not posting %s (already posted at %s)",
               article.id,
               article.metadata.postedToSlackAt
             );
+            postedArticles.push(article);
+            return postedArticles;
+          }
+
+          if (!article.summary) {
+            logger.debug("Slack: Not posting %s (no summary)", article.id);
             postedArticles.push(article);
             return postedArticles;
           }

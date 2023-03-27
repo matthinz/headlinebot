@@ -1,7 +1,6 @@
 import { config } from "dotenv";
 import { scrapeArticlesPlugin } from "./plugins/scrape-articles";
-import { loadPlugin } from "./plugins/load";
-import { savePlugin } from "./plugins/save";
+import { loadPlugin, savePlugin } from "./plugins/state";
 import { scrapeHeadlinesPlugin } from "./plugins/scrape-headlines";
 import { Plugin, State } from "./types";
 import { launchBrowser } from "./browser";
@@ -42,8 +41,10 @@ async function run(args: string[]) {
 
   const shouldScrapeHeadlines = !args.includes("--no-scrape");
 
+  const stateFile = process.env.STATE_JSON_FILE ?? ".state.json.gz";
+
   const plugins = [
-    loadPlugin,
+    loadPlugin({ file: stateFile, logger }),
     shouldScrapeHeadlines &&
       scrapeHeadlinesPlugin({
         browser,
@@ -55,7 +56,7 @@ async function run(args: string[]) {
       logger,
     }),
     summarizePlugin({ logger, maxArticleAgeInDays: 5 }),
-    savePlugin,
+    savePlugin({ file: stateFile, logger }),
     rssPlugin(),
   ].filter(Boolean) as Plugin[];
 
@@ -66,7 +67,10 @@ async function run(args: string[]) {
         logger,
         token: process.env.SLACK_TOKEN,
       }),
-      savePlugin
+      savePlugin({
+        file: stateFile,
+        logger,
+      })
     );
   }
 

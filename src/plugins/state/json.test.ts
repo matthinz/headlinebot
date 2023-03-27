@@ -1,8 +1,7 @@
 import { describe, it } from "node:test";
 import assert from "node:assert";
-import { State } from "../types";
-import { serializeState } from "./save";
-import { deserializeState } from "./load";
+import { State } from "../../types";
+import { deserializeState, serializeState } from "./json";
 
 describe("#serializeState", () => {
   it("serializes dates", () => {

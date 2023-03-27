@@ -12,6 +12,7 @@ import {
   State,
   TextContent,
 } from "../types";
+import { delay } from "../utils";
 
 export type ScrapeArticlesPluginOptions = {
   browser: Browser;
@@ -86,6 +87,11 @@ export function scrapeArticlesPlugin({
             }
           } else {
             logger.warn("Could not get content for %s", article.url);
+          }
+
+          if (!foundInCache) {
+            // Delay before another get
+            await delay(1000, 3000);
           }
 
           return articles;

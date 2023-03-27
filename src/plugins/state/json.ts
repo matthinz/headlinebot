@@ -58,16 +58,21 @@ export async function saveStateToJsonFile(
   state: State
 ): Promise<void> {
   return new Promise((resolve, reject) => {
-    let stream = fs.createWriteStream(file);
+    const stream = fs.createWriteStream(file);
 
     if (gzip) {
-      stream = zlib.createGzip().pipe(stream);
+      zlib
+        .createGzip()
+        .end(serializeState(state))
+        .pipe(stream)
+        .on("error", reject)
+        .on("finish", resolve);
+    } else {
+      stream
+        .end(serializeState(state))
+        .on("error", reject)
+        .on("finish", resolve);
     }
-
-    stream.on("error", reject);
-    stream.on("finish", resolve);
-
-    stream.end(serializeState(state));
   });
 }
 

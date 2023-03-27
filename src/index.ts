@@ -1,6 +1,6 @@
 import { config } from "dotenv";
 import { scrapeArticlesPlugin } from "./plugins/scrape-articles";
-import { loadPlugin, savePlugin } from "./plugins/state";
+import { loadPlugin, prunePlugin, savePlugin } from "./plugins/state";
 import { scrapeHeadlinesPlugin } from "./plugins/scrape-headlines";
 import { Plugin, State } from "./types";
 import { launchBrowser } from "./browser";
@@ -51,6 +51,10 @@ async function run(args: string[]) {
         url: headlinesUrl,
       }),
     normalizePlugin,
+    prunePlugin({
+      logger,
+      maxAgeInDays: 7,
+    }),
     scrapeArticlesPlugin({
       browser,
       logger,

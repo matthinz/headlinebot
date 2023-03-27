@@ -6,6 +6,8 @@ type Options = {
   logger: Logger;
 };
 
+export { prunePlugin } from "./prune";
+
 export function loadPlugin({ file, logger }: Options): Plugin {
   return async (state: State): Promise<State> => {
     const shouldGUnzip = /\.gz$/.test(file);

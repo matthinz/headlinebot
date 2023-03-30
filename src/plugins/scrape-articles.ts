@@ -64,7 +64,8 @@ export function scrapeArticlesPlugin({
           const { document, foundInCache } = await cachedGet(
             article.url,
             browser.get,
-            state.cache
+            state.cache,
+            logger
           );
 
           if (foundInCache) {
@@ -173,7 +174,8 @@ export function htmlToPlainText(html: string): string {
 async function cachedGet(
   url: string | URL,
   get: Browser["get"],
-  cache: RequestedDocument[]
+  cache: RequestedDocument[],
+  logger: Logger
 ): Promise<{ document?: RequestedDocument; foundInCache: boolean }> {
   url = url.toString();
   const document = cache.find((e) => e.url === url);
@@ -181,7 +183,7 @@ async function cachedGet(
     return { document, foundInCache: true };
   }
 
-  const body = await get(url);
+  const body = await get(url, logger);
   return {
     document: {
       body,

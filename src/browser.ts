@@ -2,6 +2,7 @@ import { Browser as PuppeteerBrowser, Page } from "puppeteer";
 import puppeteer from "puppeteer-extra";
 import stealthPlugin from "puppeteer-extra-plugin-stealth";
 import { Logger } from "./types";
+import { delay } from "./utils";
 
 puppeteer.use(stealthPlugin());
 
@@ -13,7 +14,7 @@ export type BrowserOptions = {
 
 export type Browser = {
   close(): Promise<void>;
-  get(url: string | URL): Promise<string>;
+  get(url: string | URL, logger: Logger): Promise<string>;
 };
 
 export async function launchBrowser({
@@ -69,23 +70,41 @@ export async function launchBrowser({
     await browser.close();
   }
 
-  async function get(url: string | URL): Promise<string> {
+  async function get(url: string | URL, logger: Logger): Promise<string> {
     const page = await getPage();
 
     await page.goto(url.toString());
 
-    await onPageLoad(page);
+    while (true) {
+      if (await pageLoadFailed(page)) {
+        logger.debug("Load of %s failed. Delaying and retrying...");
+        await delay(3000, 5000);
+        await page.reload();
+        continue;
+      }
 
-    const result = await page.evaluate(
-      () => document.documentElement.outerHTML
-    );
+      await onPageLoad(page);
 
-    await page.close();
+      const result = await page.evaluate(
+        () => document.documentElement.outerHTML
+      );
 
-    return result;
+      await page.close();
+
+      return result;
+    }
   }
 
   function shouldBlockRequest(requestUrl: URL): boolean {
     return !allowedHosts.includes(requestUrl.hostname);
   }
+}
+
+async function pageLoadFailed(page: Page): Promise<boolean> {
+  const looksLikeChromeErrFailed = await page.evaluate(() => {
+    const errCode = document.querySelector<HTMLElement>(".error-code");
+    return errCode?.innerText?.trim() === "ERR_FAILED";
+  });
+
+  return looksLikeChromeErrFailed;
 }

@@ -1,11 +1,12 @@
 import cheerio from "cheerio";
 import { Browser, launchBrowser } from "../browser";
 import { ArticleSchema } from "../schema";
-import { Article, Scraper, State } from "../types";
+import { Article, Logger, Scraper, State } from "../types";
 
 export type ScrapeHeadlinesOptions = {
   url: URL;
   browser: Browser;
+  logger: Logger;
 };
 
 type FilterContext = {
@@ -93,9 +94,10 @@ const FILTERS: Filter[] = [
 export function scrapeHeadlinesPlugin({
   url,
   browser,
+  logger,
 }: ScrapeHeadlinesOptions): (state: State) => Promise<State> {
   return async (state: State) => {
-    const html = await browser.get(url);
+    const html = await browser.get(url, logger);
 
     const $ = cheerio.load(html);
 

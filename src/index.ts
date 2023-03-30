@@ -48,6 +48,7 @@ async function run(args: string[]) {
     shouldScrapeHeadlines &&
       scrapeHeadlinesPlugin({
         browser,
+        logger,
         url: headlinesUrl,
       }),
     normalizePlugin,

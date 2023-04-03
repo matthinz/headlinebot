@@ -101,10 +101,9 @@ export async function launchBrowser({
 }
 
 async function pageLoadFailed(page: Page): Promise<boolean> {
-  const looksLikeChromeErrFailed = await page.evaluate(() => {
-    const errCode = document.querySelector<HTMLElement>(".error-code");
-    return errCode?.innerText?.trim() === "ERR_FAILED";
-  });
+  const looksLikeChromeErrFailed = await page.evaluate(
+    () => (window as any)["pageData"]?.errorCode === "ERR_FAILED"
+  );
 
   return looksLikeChromeErrFailed;
 }

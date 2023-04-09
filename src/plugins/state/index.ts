@@ -1,5 +1,6 @@
 import { Logger, Plugin, State } from "../../types";
 import { loadStateFromJsonFile, saveStateToJsonFile } from "./json";
+import { loadStateFromSqlite, saveStateToSqliteFile } from "./sqlite";
 
 type Options = {
   file: string;
@@ -10,12 +11,16 @@ export { prunePlugin } from "./prune";
 
 export function loadPlugin({ file, logger }: Options): Plugin {
   return async (state: State): Promise<State> => {
-    const shouldGUnzip = /\.gz$/.test(file);
-
     const start = performance.now();
     logger.debug("Loading state from %s", file);
 
-    const loaded = await loadStateFromJsonFile(file, shouldGUnzip);
+    let loaded: State | undefined;
+
+    if (isJson(file)) {
+      loaded = await loadStateFromJsonFile(file, isGzip(file));
+    } else {
+      loaded = await loadStateFromSqlite(file);
+    }
 
     logger.debug("Loaded state in %dms", performance.now() - start);
 
@@ -33,15 +38,24 @@ export function loadPlugin({ file, logger }: Options): Plugin {
 
 export function savePlugin({ file, logger }: Options): Plugin {
   return async (state: State): Promise<State> => {
-    const shouldGzip = /\.gz$/.test(file);
-
     logger.debug("Saving state to %s", file);
     const start = performance.now();
 
-    await saveStateToJsonFile(file, shouldGzip, state);
-
+    if (isJson(file)) {
+      await saveStateToJsonFile(file, isGzip(file), state);
+    } else {
+      await saveStateToSqliteFile(file, state);
+    }
     logger.debug("Saved state in %sms", performance.now() - start);
 
     return state;
   };
+}
+
+function isJson(filename: string) {
+  return /\.json(\.gz)?$/.test(filename);
+}
+
+function isGzip(filename: string) {
+  return /\.gz$/.test(filename);
 }

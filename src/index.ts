@@ -41,7 +41,7 @@ async function run(args: string[]) {
 
   const shouldScrapeHeadlines = !args.includes("--no-scrape");
 
-  const stateFile = process.env.STATE_JSON_FILE ?? ".state.json.gz";
+  const stateFile = process.env.STATE_FILE ?? ".state.db";
 
   const plugins = [
     loadPlugin({ file: stateFile, logger }),
@@ -95,7 +95,7 @@ async function run(args: string[]) {
     cache: [],
   };
 
-  const state = await executePipeline(plugins, initialState);
+  await executePipeline(plugins, initialState);
 
   await browser.close();
 

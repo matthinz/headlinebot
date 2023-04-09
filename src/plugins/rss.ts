@@ -9,7 +9,7 @@ export function rssPlugin(): Plugin {
       copyright: "",
     });
 
-    state.articles.forEach((article) => {
+    state.articles.filter(shouldAddToFeed).forEach((article) => {
       feed.addItem({
         date: article.date ?? new Date(),
         link: article.url,
@@ -48,4 +48,9 @@ function buildContent(article: Article): string | undefined {
   } else if (article.summary) {
     return article.summary;
   }
+}
+
+function shouldAddToFeed(article: Article): boolean {
+  // Don't add things w/o summary or content to the feed
+  return !!(article.summary || article.content);
 }

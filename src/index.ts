@@ -1,17 +1,14 @@
 import { config } from "dotenv";
-import { scrapeArticlesPlugin } from "./plugins/scrape-articles";
-import { loadPlugin, prunePlugin, savePlugin } from "./plugins/state";
-import { scrapeHeadlinesPlugin } from "./plugins/scrape-headlines";
-import { Plugin, State } from "./types";
-import { launchBrowser } from "./browser";
 import { Page } from "puppeteer";
 import { createConsoleLogger } from "./logger";
 import { delay } from "./utils";
-import { normalizePlugin } from "./plugins/normalize";
-import { summarizePlugin } from "./plugins/summarize";
-import { slackPlugin } from "./plugins/slack";
-import { rssPlugin } from "./plugins/rss";
-import { s3Plugin } from "./plugins/s3";
+import { scrape } from "./scrape";
+import {
+  add,
+  formatDistance,
+  formatDistanceToNow,
+  formatRelative,
+} from "date-fns";
 
 run(process.argv.slice(2)).catch((err) => {
   console.error(err);
@@ -27,103 +24,52 @@ async function run(args: string[]) {
 
   const headlinesUrl = new URL(process.env.HEADLINES_URL ?? "");
 
-  const browser = await launchBrowser({
-    allowedHosts: [
-      headlinesUrl.hostname,
-      ...(process.env.ALLOWED_HOSTS ?? "")
-        .split(",")
-        .map((host) => host.trim())
-        .filter(Boolean),
-    ],
-    logger,
-    onPageLoad: handlePageLoad,
-  });
+  while (true) {
+    const start = new Date();
 
-  const shouldScrapeHeadlines = !args.includes("--no-scrape");
-
-  const stateFile = process.env.STATE_FILE ?? ".state.db";
-
-  const plugins = [
-    loadPlugin({ file: stateFile, logger }),
-    shouldScrapeHeadlines &&
-      scrapeHeadlinesPlugin({
-        browser,
+    try {
+      const result = await scrape({
+        headlinesUrl,
         logger,
-        url: headlinesUrl,
-      }),
-    normalizePlugin,
-    prunePlugin({
-      logger,
-      maxAgeInDays: 7,
-    }),
-    scrapeArticlesPlugin({
-      browser,
-      logger,
-    }),
-    summarizePlugin({ logger, maxArticleAgeInDays: 5 }),
-    savePlugin({ file: stateFile, logger }),
-    rssPlugin(),
-  ].filter(Boolean) as Plugin[];
+        onPageLoad: handlePageLoad,
+        shouldScrapeHeadlines: !args.includes("--no-scrape"),
+        stateFile: process.env.STATE_FILE ?? ".state.db",
+        slackChannel: process.env.SLACK_CHANNEL,
+        slackToken: process.env.SLACK_TOKEN,
+      });
 
-  if (process.env.SLACK_CHANNEL && process.env.SLACK_TOKEN) {
-    plugins.push(
-      slackPlugin({
-        channel: process.env.SLACK_CHANNEL,
-        logger,
-        token: process.env.SLACK_TOKEN,
-      }),
-      savePlugin({
-        file: stateFile,
-        logger,
-      })
-    );
-  }
+      const end = new Date();
 
-  if (process.env.S3_BUCKET) {
-    plugins.push(
-      s3Plugin({
-        bucket: process.env.S3_BUCKET,
-        endpoint: process.env.S3_ENDPOINT,
-        logger,
-        region: process.env.S3_REGION,
-      })
-    );
-  }
+      const duration = end.getTime() - start.getTime();
 
-  const initialState: State = {
-    articles: [],
-    cache: [],
-  };
+      logger.info(
+        `Scraped ${result.newArticles.length} new article${
+          result.newArticles.length === 1 ? "" : "s"
+        } in ${duration / 1000}s:`
+      );
+      result.newArticles.forEach((article) => {
+        logger.info(`- ${article.title}`);
+      });
+    } catch (err: any) {
+      logger.warn("Error during scrape");
+      logger.warn(err);
+    }
 
-  await executePipeline(plugins, initialState);
+    const minSleep = 60 * 60 * 1;
+    const maxSleep = 60 * 60 * 3;
 
-  await browser.close();
+    const timeOfNextScrape = add(new Date(), {
+      seconds: minSleep + Math.random() * (maxSleep - minSleep),
+    });
 
-  async function executePipeline(
-    plugins: Plugin[],
-    initialState: State
-  ): Promise<State> {
-    let state = initialState;
-    const nextPlugins = [...plugins];
-
-    return await next();
-
-    async function next(newState?: State | void): Promise<State> {
-      state = newState ? newState : state;
-
-      while (nextPlugins.length > 0) {
-        const plugin = nextPlugins.shift();
-        if (!plugin) {
-          continue;
-        }
-
-        const pluginResult = plugin(state, next);
-
-        state =
-          pluginResult instanceof Promise ? await pluginResult : pluginResult;
-      }
-
-      return state;
+    while (new Date() < timeOfNextScrape) {
+      logger.info(
+        `Next scrape will be at ${formatRelative(
+          timeOfNextScrape,
+          new Date()
+        )} (${formatDistanceToNow(timeOfNextScrape)})`
+      );
+      await delay(30 * 1000, 60 * 1000);
     }
   }
 }

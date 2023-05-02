@@ -1,7 +1,7 @@
 import { config } from "dotenv";
 import { Page } from "puppeteer";
 import { createConsoleLogger } from "./logger";
-import { delay } from "./utils";
+import { countdown, delay } from "./utils";
 import { scrape } from "./scrape";
 import {
   add,
@@ -45,7 +45,7 @@ async function run(args: string[]) {
       logger.info(
         `Scraped ${result.newArticles.length} new article${
           result.newArticles.length === 1 ? "" : "s"
-        } in ${duration / 1000}s:`
+        } in ${duration / 1000}s${result.newArticles.length > 0 ? ":" : ""}`
       );
       result.newArticles.forEach((article) => {
         logger.info(`- ${article.title}`);
@@ -62,15 +62,14 @@ async function run(args: string[]) {
       seconds: minSleep + Math.random() * (maxSleep - minSleep),
     });
 
-    while (new Date() < timeOfNextScrape) {
+    await countdown(timeOfNextScrape, () => {
       logger.info(
         `Next scrape will be at ${formatRelative(
           timeOfNextScrape,
           new Date()
         )} (${formatDistanceToNow(timeOfNextScrape)})`
       );
-      await delay(30 * 1000, 60 * 1000);
-    }
+    });
   }
 }
 

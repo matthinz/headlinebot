@@ -1,10 +1,12 @@
 {
   "name": "headlinebot",
-  "version": "0.0.2",
+  "version": "0.0.3",
   "bin": {
     "headlinebot": "dist/index.js"
   },
-  "engines" : { "node" : ">= 16" },
+  "engines": {
+    "node": ">= 16"
+  },
   "author": "Matt Hinz <matthinz@gmail.com>",
   "license": "CC0-1.0",
   "files": [

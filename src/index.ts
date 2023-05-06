@@ -1,3 +1,4 @@
+#!/usr/bin/env node
 import { config } from "dotenv";
 import { Page } from "puppeteer";
 import { createConsoleLogger } from "./logger";

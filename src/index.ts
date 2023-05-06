@@ -4,12 +4,7 @@ import { Page } from "puppeteer";
 import { createConsoleLogger } from "./logger";
 import { countdown, delay } from "./utils";
 import { scrape } from "./scrape";
-import {
-  add,
-  formatDistance,
-  formatDistanceToNow,
-  formatRelative,
-} from "date-fns";
+import { add, formatDistanceToNow, formatRelative } from "date-fns";
 
 run(process.argv.slice(2)).catch((err) => {
   console.error(err);

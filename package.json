@@ -1,5 +1,5 @@
 {
-  "name": "@matthinz/headlinebot",
+  "name": "headlinebot",
   "version": "0.0.1",
   "bin": {
     "headlinebot": "dist/index.js"

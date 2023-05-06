@@ -1,6 +1,6 @@
 {
   "name": "headlinebot",
-  "version": "0.0.3",
+  "version": "0.0.4",
   "bin": {
     "headlinebot": "dist/index.js"
   },

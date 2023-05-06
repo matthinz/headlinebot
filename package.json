@@ -4,6 +4,7 @@
   "bin": {
     "headlinebot": "dist/index.js"
   },
+  "engines" : { "node" : ">= 16" },
   "author": "Matt Hinz <matthinz@gmail.com>",
   "license": "CC0-1.0",
   "files": [

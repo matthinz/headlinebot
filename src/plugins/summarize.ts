@@ -116,7 +116,13 @@ async function answerPrompt(
 
     return data.choices[0]?.message?.content;
   } catch (err: any) {
-    logger.warn(err);
+    if (err.response) {
+      logger.warn(err.response.status, err.response.data);
+      logger.debug(prompt);
+    } else {
+      logger.warn(err);
+    }
+
     return;
   }
 }

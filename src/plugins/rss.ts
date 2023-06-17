@@ -36,18 +36,29 @@ export function rssPlugin(): Plugin {
 }
 
 function buildContent(article: Article): string | undefined {
-  if (article.content && article.summary) {
-    return [
-      "<blockquote>",
-      article.summary,
-      "</blockquote>",
-      article.content.html,
-    ].join("\n");
-  } else if (article.content) {
-    return article.content.html;
-  } else if (article.summary) {
-    return article.summary;
+  let preamble: string[] = [];
+
+  if (
+    article.nonClickbaitTitle &&
+    article.nonClickbaitTitle.trim() !== article.title.trim()
+  ) {
+    console.error("%s\n%s", article.title, article.nonClickbaitTitle);
+    preamble.push(`<em>Original title: ${article.title}</em>`);
   }
+
+  if (article.content && article.summary) {
+    preamble.push(article.summary);
+  }
+
+  const content = article.content?.html ?? article.summary;
+
+  if (!content) {
+    return;
+  }
+
+  return ["<blockquote>", preamble.join("<br><br>"), "</blockquote>", content]
+    .filter(Boolean)
+    .join("\n");
 }
 
 function shouldAddToFeed(article: Article): boolean {

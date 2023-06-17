@@ -24,7 +24,7 @@ const SCHEMA = {
     isActuallyLocal: {
       type: "boolean",
       description:
-        "Does this article reference events or locations in the Bellingham, WA area (including Whatcom )?",
+        process.env.IS_LOCAL_PROMPT ?? 'Does this look like "local news"?',
     },
     byline: {
       type: "array",

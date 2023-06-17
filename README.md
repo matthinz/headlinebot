@@ -33,9 +33,10 @@ yarn && yarn start
 
 Articles can be automatically summarized using ChatGPT.
 
-| Variable         | Example             | Description                                                         |
-| ---------------- | ------------------- | ------------------------------------------------------------------- |
-| `OPENAI_API_KEY` | `"sk-sldkjflsdkjf"` | Key used to access the OpenAI API (used for article summarization). |
+| Variable          | Example                               | Description                                                               |
+| ----------------- | ------------------------------------- | ------------------------------------------------------------------------- |
+| `OPENAI_API_KEY`  | `"sk-sldkjflsdkjf"`                   | Key used to access the OpenAI API (used for article summarization).       |
+| `IS_LOCAL_PROMPT` | `"Is this actually a local article?"` | Prompt used to ask ChatGPT if the article actually looks like local news. |
 
 ### Slack integration
 

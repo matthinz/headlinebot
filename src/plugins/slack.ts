@@ -42,7 +42,7 @@ export function slackPlugin({
 
           await client.chat.postMessage({
             channel,
-            text: article.title,
+            text: article.nonClickbaitTitle ?? article.title,
             // @ts-ignore
             blocks: blocks,
             unfurl_links: false,
@@ -82,7 +82,7 @@ function articleToBlocks(article: Article): KnownBlock[] {
       type: "section",
       text: {
         type: "mrkdwn",
-        text: `*${article.title}*`,
+        text: `*${article.nonClickbaitTitle ?? article.title}*`,
       },
     },
   ];
@@ -116,6 +116,16 @@ function articleToBlocks(article: Article): KnownBlock[] {
     context.elements.push({
       type: "plain_text",
       text: article.author,
+    });
+  }
+
+  if (
+    article.nonClickbaitTitle &&
+    article.nonClickbaitTitle !== article.title
+  ) {
+    context.elements.push({
+      type: "plain_text",
+      text: `Original title: ${article.title}`,
     });
   }
 

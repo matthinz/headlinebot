@@ -5,6 +5,7 @@ import { createConsoleLogger } from "./logger";
 import { countdown, delay } from "./utils";
 import { scrape } from "./scrape";
 import { add, formatDistanceToNow, formatRelative } from "date-fns";
+import { loadStateFromSqlite } from "./plugins/state/sqlite";
 
 run(process.argv.slice(2)).catch((err) => {
   console.error(err);
@@ -19,6 +20,15 @@ async function run(args: string[]) {
   });
 
   const headlinesUrl = new URL(process.env.HEADLINES_URL ?? "");
+
+  if (args[0] === "--list") {
+    const stateFile = process.env.STATE_FILE ?? ".state.db";
+    const state = await loadStateFromSqlite(stateFile);
+    state.articles.forEach((article) => {
+      console.log("%s (%s)", article.title, article.url);
+    });
+    return;
+  }
 
   while (true) {
     const start = new Date();

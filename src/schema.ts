@@ -14,6 +14,7 @@ export const ArticleSchema = z.object({
   id: z.string(),
   url: z.string(),
   title: z.string(),
+  nonClickbaitTitle: z.string().optional(),
   author: z.string().optional(),
   date: z.coerce.date().optional(),
   image: ImageSchema.optional(),

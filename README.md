@@ -37,6 +37,7 @@ Articles can be automatically summarized using ChatGPT.
 | ----------------- | ------------------------------------- | ------------------------------------------------------------------------- |
 | `OPENAI_API_KEY`  | `"sk-sldkjflsdkjf"`                   | Key used to access the OpenAI API (used for article summarization).       |
 | `IS_LOCAL_PROMPT` | `"Is this actually a local article?"` | Prompt used to ask ChatGPT if the article actually looks like local news. |
+| `PUNS`            | `1`                                   | If present, ask that generated headlines include puns and wordplay.       |
 
 ### Slack integration
 

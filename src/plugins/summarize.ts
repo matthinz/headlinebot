@@ -35,7 +35,12 @@ const SCHEMA = {
     },
     nonClickbaitHeadline: {
       type: "string",
-      description: `An unambiguous headline summarizing the article in less than 20 words, with all major people, places, and events in the article named.`,
+      description: [
+        `A headline summarizing the article in less than 20 words, with all major people, places, and events in the article named.`,
+        process.env.PUNS && " Puns and wordplay strongly encouraged.",
+      ]
+        .filter(Boolean)
+        .join(" "),
     },
     summary: {
       type: "string",

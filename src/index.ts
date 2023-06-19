@@ -45,6 +45,10 @@ async function run(args: string[]) {
 
     console.log("Title:               %s", article.title);
     console.log("Non-clickbait title: %s", article.nonClickbaitTitle);
+    console.log(
+      "Is local:            %s",
+      article.isLocal === true ? "yes" : article.isLocal === false ? "no" : "?"
+    );
     console.log("Summary:\n%s", article.summary);
 
     return;

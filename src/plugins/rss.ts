@@ -13,7 +13,7 @@ export function rssPlugin(): Plugin {
       feed.addItem({
         date: article.date ?? new Date(),
         link: article.url,
-        title: article.title,
+        title: article.nonClickbaitTitle ?? article.title,
         description: article.summary,
         id: article.id,
         content: buildContent(article),
@@ -36,24 +36,29 @@ export function rssPlugin(): Plugin {
 }
 
 function buildContent(article: Article): string | undefined {
+  const content = article.content?.html ?? article.summary;
+
+  if (!content) {
+    return;
+  }
+
   let preamble: string[] = [];
+
+  if (article.isLocal === false) {
+    preamble.push(
+      '<font color="red">This does not look like local news</font>'
+    );
+  }
 
   if (
     article.nonClickbaitTitle &&
     article.nonClickbaitTitle.trim() !== article.title.trim()
   ) {
-    console.error("%s\n%s", article.title, article.nonClickbaitTitle);
     preamble.push(`<em>Original title: ${article.title}</em>`);
   }
 
   if (article.content && article.summary) {
     preamble.push(article.summary);
-  }
-
-  const content = article.content?.html ?? article.summary;
-
-  if (!content) {
-    return;
   }
 
   return ["<blockquote>", preamble.join("<br><br>"), "</blockquote>", content]

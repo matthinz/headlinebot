@@ -58,6 +58,25 @@ export function summarizePlugin({
   return async (state: State): Promise<State> => ({
     ...state,
     articles: await asyncMap(state.articles, async (article) => {
+      // Migrate isLocal from aiInfo to article
+      if (article.isLocal == null) {
+        try {
+          const { aiInfo } = article.metadata ?? {};
+          if (aiInfo) {
+            const parsed = JSON.parse(String(aiInfo));
+            article = {
+              ...article,
+              isLocal:
+                parsed.isActuallyLocal === true
+                  ? true
+                  : parsed.isActuallyLocal === false
+                  ? false
+                  : undefined,
+            };
+          }
+        } catch {}
+      }
+
       if (!article.date) {
         return article;
       }
@@ -111,6 +130,7 @@ export async function summarizeArticle(
     article,
     {
       author: info.byline.join(", "),
+      isLocal: info.isActuallyLocal,
       nonClickbaitTitle: info.nonClickbaitHeadline,
       summary: info.summary,
     },

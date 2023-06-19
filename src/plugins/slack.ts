@@ -129,6 +129,13 @@ function articleToBlocks(article: Article): KnownBlock[] {
     });
   }
 
+  if (article.isLocal === false) {
+    context.elements.push({
+      type: "mrkdwn",
+      text: ":scream_cat: Does not seem relevant",
+    });
+  }
+
   context.elements.push({
     type: "mrkdwn",
     text: `<${article.url}|View original>`,

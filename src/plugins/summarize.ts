@@ -160,7 +160,7 @@ async function answerPrompt(
         {
           role: "system",
           content:
-            "You are a helpful assistant that provides clear and succint summaries of local news stories",
+            "You are a helpful assistant that provides clear and succinct summaries of local news stories",
         },
         {
           role: "user",

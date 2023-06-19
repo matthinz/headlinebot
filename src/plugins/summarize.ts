@@ -35,13 +35,12 @@ const SCHEMA = {
     },
     nonClickbaitHeadline: {
       type: "string",
-      description:
-        "The headline, adapted to remove clickbait language and fully communicate the thesis of the article.",
+      description: `An unambiguous headline summarizing the article in less than 20 words, with all major people, places, and events in the article named.`,
     },
     summary: {
       type: "string",
       description:
-        "A summary of the article, limited to 55 words, with all major people and places named in the article identified.",
+        "A brief but informative summary of the article, limited to 55 words, with all major people and places named in the article identified.",
     },
   },
 };
@@ -70,41 +69,48 @@ export function summarizePlugin({
         return article;
       }
 
-      const [prompt, func] = buildSummaryPromptAndFunction(article);
-
-      if (!prompt || !func) {
-        // Could not build a prompt for this article
-        logger.debug("Could not build a prompt for %s", article.id);
-        return article;
-      }
-
-      const promptAndFunctionJson = JSON.stringify({ prompt, func });
-
-      if (article.metadata?.summaryPrompt === promptAndFunctionJson) {
-        // Already been summarized
-        logger.debug("Not summarizing %s (already summarized)", article.id);
-        return article;
-      }
-
-      logger.debug("Summarizing %s", article.id);
-
-      const info = await answerPrompt(prompt, func, logger);
-
-      if (!info) {
-        return article;
-      }
-
-      return augmentArticle(
-        article,
-        {
-          author: info.byline.join(", "),
-          nonClickbaitTitle: info.nonClickbaitHeadline,
-          summary: info.summary,
-        },
-        { summaryPrompt: promptAndFunctionJson, aiInfo: JSON.stringify(info) }
-      );
+      return summarizeArticle(article, logger);
     }),
   });
+}
+
+export async function summarizeArticle(
+  article: Article,
+  logger: Logger
+): Promise<Article> {
+  const [prompt, func] = buildSummaryPromptAndFunction(article);
+
+  if (!prompt || !func) {
+    // Could not build a prompt for this article
+    logger.debug("Could not build a prompt for %s", article.id);
+    return article;
+  }
+
+  const promptAndFunctionJson = JSON.stringify({ prompt, func });
+
+  if (article.metadata?.summaryPrompt === promptAndFunctionJson) {
+    // Already been summarized
+    logger.debug("Not summarizing %s (already summarized)", article.id);
+    return article;
+  }
+
+  logger.debug("Summarizing %s", article.id);
+
+  const info = await answerPrompt(prompt, func, logger);
+
+  if (!info) {
+    return article;
+  }
+
+  return augmentArticle(
+    article,
+    {
+      author: info.byline.join(", "),
+      nonClickbaitTitle: info.nonClickbaitHeadline,
+      summary: info.summary,
+    },
+    { summaryPrompt: promptAndFunctionJson, aiInfo: JSON.stringify(info) }
+  );
 }
 
 function buildSummaryPromptAndFunction(
@@ -116,11 +122,10 @@ function buildSummaryPromptAndFunction(
     return [];
   }
   const prompt = `
-Read the following news headline and article text and report back information about it.
+Read the following news article and report back information about it.
 
-Headline: ${article.title}
+---
 
-Article text:
 ${textContent}`.trim();
 
   const func: ChatCompletionFunctions = {
@@ -147,6 +152,11 @@ async function answerPrompt(
     const response = await openai.createChatCompletion({
       model: "gpt-3.5-turbo-0613",
       messages: [
+        {
+          role: "system",
+          content:
+            "You are a helpful assistant that provides clear and succint summaries of local news stories",
+        },
         {
           role: "user",
           content: prompt,

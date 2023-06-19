@@ -6,6 +6,7 @@ import { countdown, delay } from "./utils";
 import { scrape } from "./scrape";
 import { add, formatDistanceToNow, formatRelative } from "date-fns";
 import { loadStateFromSqlite } from "./plugins/state/sqlite";
+import { summarizeArticle } from "./plugins/summarize";
 
 run(process.argv.slice(2)).catch((err) => {
   console.error(err);
@@ -27,6 +28,25 @@ async function run(args: string[]) {
     state.articles.forEach((article) => {
       console.log("%s (%s)", article.title, article.url);
     });
+    return;
+  }
+
+  if (args[0] === "--summarize") {
+    const url = args[1];
+    const stateFile = process.env.STATE_FILE ?? ".state.db";
+    const state = await loadStateFromSqlite(stateFile);
+    const originalArticle = state.articles.find((a) => a.url === url);
+
+    if (!originalArticle) {
+      throw new Error("Article not found");
+    }
+
+    const article = await summarizeArticle(originalArticle, logger);
+
+    console.log("Title:               %s", article.title);
+    console.log("Non-clickbait title: %s", article.nonClickbaitTitle);
+    console.log("Summary:\n%s", article.summary);
+
     return;
   }
 

@@ -23,7 +23,7 @@ export const ArticleSchema = z.object({
   content: TextContentSchema.optional(),
   metadata: z
     .object({})
-    .catchall(z.string().or(z.number()).or(z.boolean()))
+    .catchall(z.string().or(z.number()).or(z.boolean()).or(z.array(z.string())))
     .optional(),
 });
 

@@ -85,8 +85,8 @@ async function run(args: string[]) {
       logger.warn(err);
     }
 
-    const minSleep = 60 * 60 * 1;
-    const maxSleep = 60 * 60 * 3;
+    const minSleep = 60 * 60 * 6;
+    const maxSleep = 60 * 60 * 8;
 
     const timeOfNextScrape = add(new Date(), {
       seconds: minSleep + Math.random() * (maxSleep - minSleep),
